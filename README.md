@@ -1,79 +1,103 @@
-💰 Finance Credit Follow-Up Email Agent (MVP)
-An AI-powered agentic workflow designed to automate the accounts receivable process. The system monitors overdue invoices, determines the appropriate communication tone based on an escalation matrix, and sends personalized follow-up emails via Gmail.
+# 💰 Finance Credit Follow-Up Email Agent
 
-📋 Project Overview
-Finance teams spend significant time manually chasing overdue payments. This prototype solves the problem of inconsistent follow-ups and high Days Sales Outstanding (DSO) by using LangGraph to manage a deterministic state machine and Gemini 1.5 Flash to generate empathetic yet firm communications.
+An AI-powered agentic workflow designed to automate the accounts receivable process. This system monitors overdue invoices, determines the appropriate communication tone based on a 4-stage escalation matrix, and sends personalized follow-up emails via Gmail.
 
-Core Functionality
-Database-Driven Logic: Tracks last_email_send_timestamp to ensure clients aren't harassed (minimum 7-day interval).
+---
 
-Tone Escalation Engine: Automatically moves from "Warm & Friendly" to "Stern & Urgent" as follow-up counts increase.
+## 🚀 Features
 
-Automated Emailing: Uses smtplib to send actual emails to clients and admin alerts for legal escalations.
+- 🤖 **LangGraph Workflow:** Deterministic state machine for reliable agent behavior.
+- 📧 **Automated Emailing:** Sends actual emails using `smtplib` and Gmail App Passwords.
+- 🧠 **Tone Escalation:** Automatically switches from 'Warm' to 'Stern' based on overdue days.
+- 📅 **7-Day Smart Delay:** Logic to ensure clients aren't harassed (minimum 7-day gap between emails).
+- ⚖️ **Legal Escalation:** Automatically flags accounts and alerts the admin after 4 failed attempts.
+- 📊 **Streamlit Dashboard:** Professional UI to upload Excel data and monitor database status.
 
-Human-in-the-Loop UI: A Streamlit dashboard to ingest data, trigger batch runs, and monitor database status.
+---
 
-Layer,Choice,Rationale
-LLM,gemini-1.5-flash-latest,High speed and low cost for repetitive text generation; excellent at following structured system prompts.
-Agent Framework,LangGraph,Allows for a directed acyclic graph (DAG) structure which is perfect for deterministic state transitions (Routing -> Generating -> Sending).
-Data Source,SQLite via SQLAlchemy,"Provides a local, ACID-compliant database to track state across multiple application restarts."
-UI,Streamlit,Rapid prototyping of an internal dashboard for finance teams to view and trigger the agent.
+## 🛠️ Tech Stack
 
-🏗 Agent Architecture & Flow
-The agent follows a Stateful Workflow:
+- **LLM:** Gemini 1.5 Flash (Google AI)
+- **Agent Framework:** LangGraph (LangChain)
+- **Frontend:** Streamlit
+- **Database:** SQLite with SQLAlchemy (ORM)
+- **Data Handling:** Pandas & Openpyxl
+- **Environment:** Python 3.11+
 
-Ingestion: Excel data is parsed and synced to SQLite.
+---
 
-Eligibility Check: The system filters for records where (Current Time - Last Sent) >= 7 Days.
+## 📁 Folder Structure
 
-Router Node: Decides between generate_email (if count < 5) or escalate (if count >= 5).
+```text
+├── data/               # SQLite database storage
+├── src/
+│   ├── database.py     # SQLAlchemy models & DB CRUD
+│   ├── graph.py        # LangGraph workflow definition
+│   ├── nodes.py        # Logic for Router, Generator, and Emailer
+│   ├── prompts.py      # System prompts & Escalation matrix
+│   └── utils.py        # Date math & Excel parsing
+├── app.py              # Main Streamlit application
+├── .env                # API Keys (Google & Email)
+├── requirements.txt    # Python dependencies
+└── README.md           # You are here
+```
+---
+## 📦 Installation & Setup
 
-Generation Node: Injects invoice details into a specific prompt template based on the current stage.
+```bash
+# 1. Clone the repo
+git clone https://github.com/your-username/finance-email-agent.git
+cd finance-email-agent
 
-Action Node: Sends the email and updates the database with the new timestamp and incremented count.
-
-🔐 Security & Risk Mitigation
-Prompt Injection: Uses structured input templates. The LLM only receives specific fields (client_name, amount), preventing it from being manipulated by the source data.
-
-API Key Exposure: Implemented .env with python-dotenv. Credentials like GOOGLE_API_KEY and EMAIL_APP_PASSWORD are never hardcoded.
-
-Data Privacy (PII): All processing is done via targeted fields. Sensitive financial history is stored in a local SQLite file, not in the cloud prompts.
-
-Email Spoofing: Configured using Google's App Password system to ensure emails are sent through an authenticated SMTP channel.
-
-
-🚀 Setup & Installation
-1. Clone & Environment
-# Create and activate virtual environment
+# 2. Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Mac/Linux
+# venv\Scripts\activate   # Windows
 
-# Install dependencies
+# 3. Install dependencies
 pip install streamlit langgraph langchain-google-genai pandas openpyxl sqlalchemy python-dotenv
 
-2. Configuration
-Create a .env file in the root directory:
-GOOGLE_API_KEY=your_gemini_api_key
-EMAIL_APP_PASSWORD=your_16_char_google_app_password
+# 4. Set up environment variables (.env file)
+# GOOGLE_API_KEY=your_key
+# EMAIL_APP_PASSWORD=your_16_digit_app_password
+```
 
-4. Database Initialization
-Create a folder named data in the project root:
-mkdir data
+---
+## 📈 Escalation Matrix
 
-4. Running the Application
-streamlit run app.py
+| Stage   | Trigger               | Tone               | Key Message                                      |
+|----------|-----------------------|--------------------|--------------------------------------------------|
+| Stage 1  | 1–7 Days Overdue      | Warm & Friendly    | Gentle reminder; assume oversight.              |
+| Stage 2  | 8–14 Days Overdue     | Polite but Firm    | Payment pending; request confirmation.          |
+| Stage 3  | 15–21 Days Overdue    | Formal & Serious   | Escalating concern; mention credit impact.      |
+| Stage 4  | 22–30 Days Overdue    | Stern & Urgent     | Final reminder before legal escalation.         |
+| Flagged  | 30+ Days Overdue      | Legal Alert        | Human review required; Admin notified.          |
 
-📈 Escalation Matrix (Mandatory Design)
-Stage,Trigger,Tone,Key Message
-1st Follow-Up,1–7 days,Warm & Friendly,"Gentle reminder, assume oversight."
-2nd Follow-Up,8–14 days,Polite but Firm,Payment still pending; request confirmation.
-3rd Follow-Up,15–21 days,Formal & Serious,Escalating concern; mention credit impact.
-4th Follow-Up,22–30 days,Stern & Urgent,Final reminder before legal escalation.
-Escalation,30+ days,Flag for Legal,Human review required; email sent to admin.
+---
+## 🚀 Usage Guide
 
-🧑‍💻 Author
-Parve Alam
+1. **Initialize**  
+   Create a `data/` folder in the root directory.
 
-Project Type: AI Agent / Fintech Automation
+2. **Upload Invoice File**  
+   Use the Streamlit dashboard to upload your **"Overdue Invoices"** Excel file.
 
-Date: May 2026
+3. **Sync Database**  
+   Click on **"Sync to Database"** to populate the local SQLite database with invoice records.
+
+4. **Run Follow-up Engine**  
+   Click **"Run Follow-up Engine"** to start the automated workflow.
+
+   - The agent checks whether **7 days** have passed since the `last_email_send_timestamp`.
+   - If eligible, Gemini generates a **tone-appropriate follow-up email** based on the escalation stage.
+   - The email is automatically sent to the client.
+   - The database is updated with the latest follow-up activity.
+
+5. **Monitor Status**  
+   Review the **"Database Status"** table at the bottom of the Streamlit app to track invoice states, email history, and escalation progress.
+
+---
+## 📜 License
+This project is for educational and prototype purposes only.  
+
+© 2026 Parvej Alam.
