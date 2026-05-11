@@ -6,3 +6,7 @@ openpyxl
 sqlalchemy
 python-dotenv
 pydantic
+apscheduler
+pygraphviz  # Required for high-quality graph exports
+grandalf    # Required for graph layout
+mermaid     # Required for Mermaid diagram generation

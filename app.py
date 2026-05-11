@@ -1,97 +1,80 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-from src.database import init_db, SessionLocal, Invoice
-from src.utils import is_eligible_for_followup
-from src.graph import build_graph
+import os
+from models.database import init_db, SessionLocal, Invoice
+from agents.graph import build_v2_graph
+from services.scheduler import start_scheduler
+from services.invoice_service import add_new_invoice
+from ui.dashboard import render_stats, render_human_review_queue, render_audit_logs
+from utils.visualizer import save_graph_image
 from dotenv import load_dotenv
 
+# 1. INITIALIZATION
 load_dotenv()
 init_db()
+start_scheduler()
+agent_app = build_v2_graph()
+save_graph_image(agent_app, "graph.png")
 
-st.set_page_config(page_title="Finance Credit Agent", layout="wide")
-st.title("💰 Finance Credit Follow-Up Agent")
+# 2. PAGE CONFIG
+st.set_page_config(page_title="AI Enablement Finance", layout="wide", page_icon="💰")
 
-# Sidebar - Settings
-with st.sidebar:
-    st.header("Settings")
-    if st.button("Clear Database"):
-        db = SessionLocal()
-        db.query(Invoice).delete()
-        db.commit()
-        db.close()
-        st.warning("Database cleared.")
+# 3. SIDEBAR
+st.sidebar.title("AI Enablement")
+mode = st.sidebar.radio("Mode", ["Auto-Process", "Human Review"])
 
-# 1. Upload Section
-uploaded_file = st.file_uploader("Upload Overdue Invoices (Excel)", type=["xlsx"])
-
-if uploaded_file:
-    df = pd.read_excel(uploaded_file)
-    st.write("### Preview Uploaded Data", df)
-    
-    if st.button("Sync to Database"):
-        db = SessionLocal()
-        for _, row in df.iterrows():
-            # Using the exact names from your Excel preview: 
-            # "Invoice No.", "Client Name", "Amount", etc.
-            inv_id = str(row['Invoice No.'])
-            
-            existing = db.query(Invoice).filter(Invoice.invoice_no == inv_id).first()
-            if not existing:
-                new_inv = Invoice(
-                    invoice_no=inv_id,
-                    client_name=row['Client Name'],
-                    amount=row['Amount'],
-                    due_date=pd.to_datetime(row['Due Date']),
-                    contact_email=row['Contact Email'],
-                    follow_up_count=row.get('Follow-up Count', 0)
-                )
-                db.add(new_inv)
-        db.commit()
-        db.close()
-        st.success("Database Updated!")
-
-# 2. Processing Section
-st.divider()
-st.subheader("Process Follow-ups")
-
-if st.button("Run Follow-up Engine"):
+if st.sidebar.button("🗑️ Reset Database"):
     db = SessionLocal()
-    # Get all active invoices
-    active_invoices = db.query(Invoice).filter(Invoice.status == "Active").all()
-    
-    agent = build_graph()
-    
-    results = []
-    for inv in active_invoices:
-        # THE 7-DAY LOGIC
-        if is_eligible_for_followup(inv.last_email_send_timestamp):
-            st.info(f"Processing {inv.client_name} (Inv: {inv.invoice_no})...")
-            
-            # Prepare state for LangGraph
-            initial_state = {
-                "invoice_no": inv.invoice_no,
-                "client_name": inv.client_name,
-                "amount": inv.amount,
-                "due_date": inv.due_date.strftime("%Y-%m-%d"),
-                "contact_email": inv.contact_email,
-                "follow_up_count": inv.follow_up_count
-            }
-            
-            # Run the Graph
-            final_output = agent.invoke(initial_state)
-            results.append(final_output)
-        else:
-            st.write(f"⏩ {inv.client_name} skip: Last email was less than 7 days ago.")
-
+    db.query(Invoice).delete()
+    db.commit()
     db.close()
-    if results:
-        st.success(f"Batch complete. Processed {len(results)} invoices.")
+    st.rerun()
 
-# 3. View Current Status
-st.divider()
-st.subheader("Database Status")
-db = SessionLocal()
-current_db_df = pd.read_sql(db.query(Invoice).statement, db.bind)
-st.dataframe(current_db_df)
-db.close()
+# 4. BRANDING HEADERS
+st.title("💰 AI Enablement: Finance Follow-Up")
+st.markdown("Strategic Information Management & Automated Credit Routing System.")
+
+render_stats()
+
+tab1, tab2, tab3 = st.tabs(["📊 Management", "👀 Review Queue", "🛡️ Audit"])
+
+with tab1:
+    col_a, col_b = st.columns([1, 1])
+    
+    with col_a:
+        st.subheader("📥 Data Ingestion")
+        uploaded_file = st.file_uploader("Upload Invoices", type=["xlsx"])
+        if uploaded_file:
+            df = pd.read_excel(uploaded_file)
+            if st.button("Sync to System"):
+                for _, row in df.iterrows():
+                    add_new_invoice({"invoice_no": str(row['Invoice No.']), "client_name": row['Client Name'], "amount": row['Amount'], "due_date": pd.to_datetime(row['Due Date']), "contact_email": row['Contact Email']})
+                st.success("Data Synced.")
+
+    with col_b:
+        st.subheader("⚙️ Agent Interpretation")
+        st.image("graph.png", caption="Multi-Agent Workflow Path")
+        
+        if st.button("🚀 Run Follow-up Engine", type="primary"):
+            from services.scheduler import process_eligible_invoices
+            # Interpreted Processing Visualization
+            with st.status("Agent initialized... checking eligible invoices") as status:
+                st.write("🔍 Identifying overdue accounts...")
+                process_eligible_invoices()
+                status.update(label="Engine Run Complete", state="complete")
+            st.rerun()
+
+    st.divider()
+    db = SessionLocal()
+    current_invoices = pd.read_sql(db.query(Invoice).statement, db.bind)
+    st.dataframe(current_invoices, use_container_width=True)
+    db.close()
+
+with tab2:
+    if mode == "Human Review":
+        render_human_review_queue(agent_app)
+    else:
+        st.info("Switch to 'Human Review' mode in sidebar to approve drafts.")
+
+with tab3:
+    render_audit_logs()
