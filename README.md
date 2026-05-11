@@ -1,17 +1,102 @@
-# 💰 Finance Credit Follow-Up Email Agent
+# 💰 Finance Credit Follow-Up Email Agent — Version 2
 
-An AI-powered agentic workflow designed to automate the accounts receivable process. This system monitors overdue invoices, determines the appropriate communication tone based on a 4-stage escalation matrix, and sends personalized follow-up emails via Gmail.
+An enterprise-grade AI-powered finance collection automation platform built using multi-agent orchestration.  
+The system automates overdue payment follow-ups, escalates communication tone intelligently, supports human-in-the-loop approvals, maintains complete audit trails, and performs scheduled collection workflows using LangGraph agents.
 
 ---
 
-## 🚀 Features
+# 🚀 Version 2 Features
 
-- 🤖 **LangGraph Workflow:** Deterministic state machine for reliable agent behavior.
-- 📧 **Automated Emailing:** Sends actual emails using `smtplib` and Gmail App Passwords.
-- 🧠 **Tone Escalation:** Automatically switches from 'Warm' to 'Stern' based on overdue days.
-- 📅 **7-Day Smart Delay:** Logic to ensure clients aren't harassed (minimum 7-day gap between emails).
-- ⚖️ **Legal Escalation:** Automatically flags accounts and alerts the admin after 4 failed attempts.
-- 📊 **Streamlit Dashboard:** Professional UI to upload Excel data and monitor database status.
+- 🤖 **Multi-Agent LangGraph Workflow**
+  - Router Agent
+  - Email Generator Agent
+  - Validator Agent
+  - Human Approval Agent
+  - Sender Agent
+  - Audit Agent
+  - Escalation Agent
+
+---
+
+- 📧 **AI-Powered Personalized Emails**
+  - Dynamic client-specific emails
+  - Includes:
+    - Client Name
+    - Invoice Number
+    - Amount Due
+    - Due Date
+    - Days Overdue
+    - Payment Link
+  - Backend-controlled invoice values to prevent hallucinations
+
+---
+
+- 🧠 **4-Stage Tone Escalation Engine**
+  - Stage 1 → Friendly Reminder
+  - Stage 2 → Professional Follow-Up
+  - Stage 3 → Formal Warning
+  - Stage 4 → Final Notice
+  - Stage 5+ → Manual Finance/Legal Escalation
+
+---
+
+- 👨‍💻 **Human-in-the-Loop (HITL) Approval System**
+  - Auto Send Mode
+  - Human Review Mode
+  - Email Preview Before Sending
+  - Regenerate Email Support
+  - Retry Approval Workflow
+  - Auto-send after final retry
+
+---
+
+- 🛡️ **Enterprise Security & Validation**
+  - Prompt Injection Mitigation
+  - PII Protection
+  - Structured Output Validation
+  - Placeholder Detection
+  - API Key Security using `.env`
+  - Input Sanitization
+  - Hallucination Prevention
+  - Email Validation Layer
+
+---
+
+- 📅 **Automated Cron Scheduling**
+  - Immediate Stage-1 email on invoice insertion
+  - Daily scheduled follow-up processing at 10:00 AM
+  - Smart 7-day reminder interval
+  - Duplicate send prevention
+
+---
+
+- 📊 **Enterprise Audit Trail System**
+  - Tracks every generated email
+  - Human approval/rejection history
+  - Retry attempts
+  - Send failures
+  - Escalation logs
+  - Timestamped activity tracking
+  - Model usage logging
+
+---
+
+- ⚖️ **Automatic Legal / Finance Escalation**
+  - Stops automated reminders after Stage 4
+  - Flags invoice for manual review
+  - Sends internal escalation notification
+  - Creates escalation audit logs
+
+---
+
+- 📈 **Advanced Streamlit Dashboard**
+  - Pending Invoice Analytics
+  - Human Review Queue
+  - Audit Logs Viewer
+  - Escalated Cases
+  - Failed Email Monitoring
+  - Stage-wise Filters
+  - Status Tracking
 
 ---
 
@@ -29,17 +114,46 @@ An AI-powered agentic workflow designed to automate the accounts receivable proc
 ## 📁 Folder Structure
 
 ```text
-├── data/               # SQLite database storage
-├── src/
-│   ├── database.py     # SQLAlchemy models & DB CRUD
-│   ├── graph.py        # LangGraph workflow definition
-│   ├── nodes.py        # Logic for Router, Generator, and Emailer
-│   ├── prompts.py      # System prompts & Escalation matrix
-│   └── utils.py        # Date math & Excel parsing
-├── app.py              # Main Streamlit application
-├── .env                # API Keys (Google & Email)
-├── requirements.txt    # Python dependencies
-└── README.md           # You are here
+finance-email-agent/
+│
+├── agents/                         # Multi-agent LangGraph workflow
+│   ├── __init__.py
+│   ├── graph.py                    # LangGraph workflow builder
+│   ├── nodes.py                    # Router, Generator, Validator, Sender, Escalation agents
+│   ├── prompts.py                  # System prompts & escalation prompts
+│   └── state.py                    # Shared LangGraph state schema
+│
+├── data/                           # SQLite database storage
+│   └── database.db
+│
+├── models/                         # Database models & ORM setup
+│   ├── __init__.py
+│   └── database.py                 # Invoice + Audit models
+│
+├── services/                       # Business logic/services layer
+│   ├── __init__.py
+│   ├── audit.py                    # Audit trail logging service
+│   ├── email_service.py            # SMTP / SendGrid email handling
+│   ├── invoice_service.py          # Invoice processing logic
+│   └── scheduler.py                # APScheduler cron jobs
+│
+├── ui/                             # Streamlit dashboard UI
+│   ├── __init__.py
+│   └── dashboard.py                # Dashboard components & HITL workflow
+│
+├── utils/                          # Utility/helper functions
+│   ├── __init__.py
+│   └── visualizer.py               # LangGraph visualization & graph export
+│
+├── venv/                           # Virtual environment
+│
+├── .env                            # Environment variables & secrets
+├── .gitignore                      # Git ignored files
+├── app.py                          # Main Streamlit application entry point
+├── graph.png                       # Auto-generated LangGraph workflow image
+├── LICENSE                         # Project license
+├── README.md                       # Project documentation
+└── requirements.txt               # Python dependencies
 ```
 ---
 ## 📦 Installation & Setup
@@ -85,15 +199,18 @@ pip install streamlit langgraph langchain-google-genai pandas openpyxl sqlalchem
 3. **Sync Database**  
    Click on **"Sync to Database"** to populate the local SQLite database with invoice records.
 
-4. **Run Follow-up Engine**  
+4. **Choose The Method For Running Of Follow-up**
+   Click **Auto-Process** or **Human-Review**.
+
+5. **Run Follow-up Engine**  
    Click **"Run Follow-up Engine"** to start the automated workflow.
 
-   - The agent checks whether **7 days** have passed since the `last_email_send_timestamp`.
-   - If eligible, Gemini generates a **tone-appropriate follow-up email** based on the escalation stage.
-   - The email is automatically sent to the client.
-   - The database is updated with the latest follow-up activity.
+   - For **Human-Review** go to the human-review tab and select either **Approve** or **Reject**.
+     
+6. **Auditing**
+   For Auditing ,use the audit log tab.
 
-5. **Monitor Status**  
+8. **Monitor Status**  
    Review the **"Database Status"** table at the bottom of the Streamlit app to track invoice states, email history, and escalation progress.
 
 ---
