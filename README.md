@@ -3,6 +3,10 @@
 An enterprise-grade AI-powered finance collection automation platform built using multi-agent orchestration.  
 The system automates overdue payment follow-ups, escalates communication tone intelligently, supports human-in-the-loop approvals, maintains complete audit trails, and performs scheduled collection workflows using LangGraph agents.
 
+## 🧠 Multi-Agent Workflow Graph
+
+![Workflow Graph](https://github.com/parvejsir/Finance-follow-up-email-agent/blob/f223bc5b3815f76a777d7f105116f94027597913/graph.png)
+
 ---
 
 # 🚀 Version 2 Features
