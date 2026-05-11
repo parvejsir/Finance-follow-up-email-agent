@@ -17,7 +17,7 @@ An AI-powered agentic workflow designed to automate the accounts receivable proc
 
 ## 🛠️ Tech Stack
 
-- **LLM:** Gemini 1.5 Flash (Google AI)
+- **LLM:** Gemini 2.5 Flash (Google AI)
 - **Agent Framework:** LangGraph (LangChain)
 - **Frontend:** Streamlit
 - **Database:** SQLite with SQLAlchemy (ORM)

@@ -46,10 +46,22 @@ with tab1:
         uploaded_file = st.file_uploader("Upload Invoices", type=["xlsx"])
         if uploaded_file:
             df = pd.read_excel(uploaded_file)
-            if st.button("Sync to System"):
-                for _, row in df.iterrows():
-                    add_new_invoice({"invoice_no": str(row['Invoice No.']), "client_name": row['Client Name'], "amount": row['Amount'], "due_date": pd.to_datetime(row['Due Date']), "contact_email": row['Contact Email']})
-                st.success("Data Synced.")
+            # Inside tab1 "Sync to System" button logic in app.py
+        if st.button("Sync to System"):
+            for _, row in df.iterrows():
+                # Picking up 'Follow Up Count' from Excel if it exists, else default to 0
+                excel_count = int(row.get('Follow Up Count', 0))
+                
+                invoice_data = {
+                    "invoice_no": str(row['Invoice No.']),
+                    "client_name": row['Client Name'],
+                    "amount": row['Amount'],
+                    "due_date": pd.to_datetime(row['Due Date']),
+                    "contact_email": row['Contact Email'],
+                    "follow_up_count": excel_count # Pick up existing progress
+                }
+                add_new_invoice(invoice_data)
+            st.success(f"Successfully synced {len(df)} records with their existing history.")
 
     with col_b:
         st.subheader("⚙️ Agent Interpretation")

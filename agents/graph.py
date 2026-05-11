@@ -30,11 +30,13 @@ def build_v2_graph():
 
     workflow.add_edge("generator", "validator")
     
+    # CRITICAL FIX: Only go to sender if processing_mode is 'Auto-Process'
     workflow.add_conditional_edges(
         "validator",
-        lambda x: x["next_node"],
+        lambda x: "sender" if x.get("processing_mode") == "Auto-Process" else "end_path",
         {
-            "send": "sender",
+            "sender": "sender",
+            "end_path": END,     # Stops here so you can review in UI
             "generate": "generator" 
         }
     )
@@ -42,6 +44,4 @@ def build_v2_graph():
     workflow.add_edge("sender", END)
     workflow.add_edge("escalator", END)
 
-    # We compile with a breakpoint if we want to stop for human review 
-    # (Controlled via the UI logic in app.py)
     return workflow.compile()

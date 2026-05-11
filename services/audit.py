@@ -13,7 +13,7 @@ def create_audit_entry(state, status="Draft", error=None):
             generated_email=state.get("final_email_body", ""),
             send_status=status,
             retry_count=state.get("retry_count", 0),
-            llm_model="gemini-1.5-flash",
+            llm_model="gemini-2.5-flash",
             error_message=str(error) if error else None,
             generated_at=datetime.now()
         )

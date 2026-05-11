@@ -7,14 +7,9 @@ import streamlit as st
 scheduler = BackgroundScheduler()
 
 def process_eligible_invoices():
-    """
-    Core engine to process overdue invoices.
-    Optimized to cache drafts in DB to prevent Gemini Quota issues.
-    """
     db = SessionLocal()
     now = datetime.now()
     
-    # Filter for invoices that are due for a follow-up
     eligible = db.query(Invoice).filter(
         Invoice.status == "Active",
         Invoice.next_followup_due <= now
@@ -26,17 +21,15 @@ def process_eligible_invoices():
 
     agent = build_v2_graph()
     
-    # We check the UI session state to see if we are in Human Review mode
-    # If this is running as a background CRON, default to Auto-Process
-    mode = "Auto-Process"
+    # Determine mode from Streamlit or default to Auto
+    current_mode = "Auto-Process"
     try:
         if "mode" in st.session_state:
-            mode = st.session_state["mode"]
+            current_mode = st.session_state["mode"]
     except:
         pass
 
     for inv in eligible:
-        # Prepare state for the agent
         state = {
             "invoice_no": inv.invoice_no,
             "client_name": inv.client_name,
@@ -46,35 +39,22 @@ def process_eligible_invoices():
             "follow_up_count": inv.follow_up_count,
             "current_stage": inv.follow_up_count + 1,
             "retry_count": inv.retry_count or 0,
-            "generated_content": inv.last_generated_email # Pass existing draft if any
+            "generated_content": inv.last_generated_email,
+            "processing_mode": current_mode # Pass mode to the graph
         }
         
-        # 1. RUN GENERATION & VALIDATION
-        # We only invoke the generator if no draft exists to save QUOTA
+        # Invoke the graph. 
+        # If mode is 'Human Review', it stops at validator and returns state.
         output = agent.invoke(state)
         
-        # 2. CACHE THE RESULT
+        # Save the draft to DB for UI Review
         inv.last_generated_email = output.get("final_email_body")
         db.commit()
-
-        # 3. AUTO-SEND LOGIC
-        # Only move to the 'sender' logic if mode is Auto-Process
-        if mode == "Auto-Process":
-            from agents.nodes import sender_agent
-            sender_agent(output)
             
     db.close()
 
 def start_scheduler():
-    """Starts the background cron job for 10:00 AM daily."""
     if not scheduler.running:
-        # Avoid duplicate job IDs if scheduler restarts
         if not scheduler.get_job('daily_finance_check'):
-            scheduler.add_job(
-                process_eligible_invoices, 
-                'cron', 
-                hour=10, 
-                minute=0, 
-                id='daily_finance_check'
-            )
+            scheduler.add_job(process_eligible_invoices, 'cron', hour=10, minute=0, id='daily_finance_check')
         scheduler.start()
