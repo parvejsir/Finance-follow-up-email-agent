@@ -169,7 +169,7 @@ source venv/bin/activate  # Mac/Linux
 # venv\Scripts\activate   # Windows
 
 # 3. Install dependencies
-pip install streamlit langgraph langchain-google-genai pandas openpyxl sqlalchemy python-dotenv
+pip install streamlit langgraph langchain-google-genai pandas openpyxl sqlalchemy python-dotenv pygraphviz grandalf mermaid
 
 # 4. Set up environment variables (.env file)
 # GOOGLE_API_KEY=your_key
