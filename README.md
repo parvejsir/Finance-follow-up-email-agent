@@ -178,6 +178,10 @@ pip install streamlit langgraph langchain-google-genai pandas openpyxl sqlalchem
 # 4. Set up environment variables (.env file)
 # GOOGLE_API_KEY=your_key
 # EMAIL_APP_PASSWORD=your_16_digit_app_password
+# TWILIO_ACCOUNT_SID=your_twilio_sid
+# TWILIO_AUTH_TOKEN=your_twilio_auth
+# TWILIO_PHONE_NUMBER=your_twilio_phone_number
+
 ```
 
 ---
