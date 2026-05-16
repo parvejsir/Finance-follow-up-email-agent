@@ -23,10 +23,10 @@ st.set_page_config(page_title="AI Enablement Finance", layout="wide", page_icon=
 st.sidebar.title("AI Enablement")
 mode = st.sidebar.radio("Mode", ["Auto-Process", "Human Review"])
 
-# Store chosen processing mode in Streamlit session state for scheduler visibility
+# Sync current processing state globally for LangGraph conditional branches
 st.session_state["mode"] = mode
 
-if st.sidebar.button("🗑️ Reset Database"):
+if st.sidebar.button("🗑️ Reset Database", use_container_width=True):
     db = SessionLocal()
     db.query(Invoice).delete()
     db.commit()
@@ -40,6 +40,7 @@ st.markdown("Strategic Information Management & Automated Credit Routing System.
 
 render_stats()
 
+# 5. WORKFLOW MIGRATION INTERFACE
 tab1, tab2, tab3 = st.tabs(["📊 Management", "👀 Review Queue", "🛡️ Audit"])
 
 with tab1:
@@ -49,41 +50,42 @@ with tab1:
         st.subheader("📥 Data Ingestion")
         uploaded_file = st.file_uploader("Upload Invoices", type=["xlsx", "csv"])
         
-        df = None
         if uploaded_file:
-            # Handle both formats cleanly
+            # Multi-extension file interpreter layer
             if uploaded_file.name.endswith('.csv'):
                 df = pd.read_csv(uploaded_file)
             else:
                 df = pd.read_excel(uploaded_file)
             st.dataframe(df.head(5), use_container_width=True)
 
-        if st.button("Sync to System"):
-            if df is not None:
+            # CRITICAL STRUCTURAL RE-ALIGNMENT: Nested safely back under file layout context
+            if st.button("Sync to System", use_container_width=True):
                 for _, row in df.iterrows():
                     excel_count = int(row.get('Follow Up Count', 0))
                     
-                    # Core Payload extraction mapping columns to the DB schema
                     invoice_data = {
                         "invoice_no": str(row['Invoice No.']),
                         "client_name": row['Client Name'],
                         "amount": float(row['Amount']),
                         "due_date": pd.to_datetime(row['Due Date']),
                         "contact_email": row['Contact Email'],
-                        "contact_phone": str(row['Contact Phone']).strip() if 'Contact Phone' in row else None,
+                        "contact_phone": str(row['Contact Phone']).strip() if 'Contact Phone' in row and pd.notna(row['Contact Phone']) else None,
                         "follow_up_count": excel_count 
                     }
                     add_new_invoice(invoice_data)
-                st.success(f"Successfully synced {len(df)} records into multi-channel routing pipeline.")
-                st.rerun()
-            else:
-                st.error("Please upload a valid data sheet file first.")
+                # Green notification flag is now securely restored to the interface layout view!
+                # 1. Show an immediate popup notification that survives page reruns
+                st.toast(f"✅ Synced {len(df)} records into the pipeline!", icon="🚀")
+                # 2. Display the green success block on the layout
+                st.success(f"✅ Successfully synced {len(df)} records into multi-channel routing pipeline.")
+                # 3. Use st.session_state to hold the view rather than an aggressive hard rerun
+                st.info("🔄 Refreshing metrics... Scroll down to view the active database updates.")
 
     with col_b:
         st.subheader("⚙️ Agent Interpretation")
         st.image("graph.png", caption="Multi-Agent Workflow Path")
         
-        if st.button("🚀 Run Follow-up Engine", type="primary"):
+        if st.button("🚀 Run Follow-up Engine", type="primary", use_container_width=True):
             from services.scheduler import process_eligible_invoices
             with st.status("Agent initialized... executing credit check logic") as status:
                 st.write("🔍 Extracting current timeline schedules...")

@@ -2,7 +2,7 @@ from datetime import datetime
 from models.database import SessionLocal, AuditLog
 
 def create_audit_entry(state, status="Draft", error=None):
-    """Logs the agent's current state into the AuditLog table."""
+    """Logs the agent's current state and feedback comments into the AuditLog table."""
     db = SessionLocal()
     try:
         log = AuditLog(
@@ -13,6 +13,7 @@ def create_audit_entry(state, status="Draft", error=None):
             generated_email=state.get("final_email_body", ""),
             send_status=status,
             retry_count=state.get("retry_count", 0),
+            human_feedback=state.get("human_feedback"), # <-- Capture the feedback strings directly
             llm_model="gemini-2.5-flash",
             error_message=str(error) if error else None,
             generated_at=datetime.now()
