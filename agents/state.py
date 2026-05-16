@@ -7,6 +7,7 @@ class AgentState(TypedDict):
     amount: float
     due_date: str
     contact_email: str
+    contact_phone: Optional[str] # <-- Added to capture telephone strings
     
     # Metadata
     follow_up_count: int

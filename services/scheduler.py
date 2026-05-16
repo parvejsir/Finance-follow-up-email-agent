@@ -21,7 +21,6 @@ def process_eligible_invoices():
 
     agent = build_v2_graph()
     
-    # Determine mode from Streamlit or default to Auto
     current_mode = "Auto-Process"
     try:
         if "mode" in st.session_state:
@@ -36,18 +35,16 @@ def process_eligible_invoices():
             "amount": inv.amount,
             "due_date": inv.due_date.strftime("%Y-%m-%d"),
             "contact_email": inv.contact_email,
+            "contact_phone": inv.contact_phone, # <-- Map the text destination data
             "follow_up_count": inv.follow_up_count,
             "current_stage": inv.follow_up_count + 1,
             "retry_count": inv.retry_count or 0,
             "generated_content": inv.last_generated_email,
-            "processing_mode": current_mode # Pass mode to the graph
+            "processing_mode": current_mode 
         }
         
-        # Invoke the graph. 
-        # If mode is 'Human Review', it stops at validator and returns state.
         output = agent.invoke(state)
         
-        # Save the draft to DB for UI Review
         inv.last_generated_email = output.get("final_email_body")
         db.commit()
             

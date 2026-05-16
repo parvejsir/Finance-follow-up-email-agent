@@ -23,11 +23,15 @@ st.set_page_config(page_title="AI Enablement Finance", layout="wide", page_icon=
 st.sidebar.title("AI Enablement")
 mode = st.sidebar.radio("Mode", ["Auto-Process", "Human Review"])
 
+# Store chosen processing mode in Streamlit session state for scheduler visibility
+st.session_state["mode"] = mode
+
 if st.sidebar.button("🗑️ Reset Database"):
     db = SessionLocal()
     db.query(Invoice).delete()
     db.commit()
     db.close()
+    st.sidebar.success("Database wiped successfully!")
     st.rerun()
 
 # 4. BRANDING HEADERS
@@ -43,25 +47,37 @@ with tab1:
     
     with col_a:
         st.subheader("📥 Data Ingestion")
-        uploaded_file = st.file_uploader("Upload Invoices", type=["xlsx"])
+        uploaded_file = st.file_uploader("Upload Invoices", type=["xlsx", "csv"])
+        
+        df = None
         if uploaded_file:
-            df = pd.read_excel(uploaded_file)
-            # Inside tab1 "Sync to System" button logic in app.py
+            # Handle both formats cleanly
+            if uploaded_file.name.endswith('.csv'):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            st.dataframe(df.head(5), use_container_width=True)
+
         if st.button("Sync to System"):
-            for _, row in df.iterrows():
-                # Picking up 'Follow Up Count' from Excel if it exists, else default to 0
-                excel_count = int(row.get('Follow Up Count', 0))
-                
-                invoice_data = {
-                    "invoice_no": str(row['Invoice No.']),
-                    "client_name": row['Client Name'],
-                    "amount": row['Amount'],
-                    "due_date": pd.to_datetime(row['Due Date']),
-                    "contact_email": row['Contact Email'],
-                    "follow_up_count": excel_count # Pick up existing progress
-                }
-                add_new_invoice(invoice_data)
-            st.success(f"Successfully synced {len(df)} records with their existing history.")
+            if df is not None:
+                for _, row in df.iterrows():
+                    excel_count = int(row.get('Follow Up Count', 0))
+                    
+                    # Core Payload extraction mapping columns to the DB schema
+                    invoice_data = {
+                        "invoice_no": str(row['Invoice No.']),
+                        "client_name": row['Client Name'],
+                        "amount": float(row['Amount']),
+                        "due_date": pd.to_datetime(row['Due Date']),
+                        "contact_email": row['Contact Email'],
+                        "contact_phone": str(row['Contact Phone']).strip() if 'Contact Phone' in row else None,
+                        "follow_up_count": excel_count 
+                    }
+                    add_new_invoice(invoice_data)
+                st.success(f"Successfully synced {len(df)} records into multi-channel routing pipeline.")
+                st.rerun()
+            else:
+                st.error("Please upload a valid data sheet file first.")
 
     with col_b:
         st.subheader("⚙️ Agent Interpretation")
@@ -69,9 +85,8 @@ with tab1:
         
         if st.button("🚀 Run Follow-up Engine", type="primary"):
             from services.scheduler import process_eligible_invoices
-            # Interpreted Processing Visualization
-            with st.status("Agent initialized... checking eligible invoices") as status:
-                st.write("🔍 Identifying overdue accounts...")
+            with st.status("Agent initialized... executing credit check logic") as status:
+                st.write("🔍 Extracting current timeline schedules...")
                 process_eligible_invoices()
                 status.update(label="Engine Run Complete", state="complete")
             st.rerun()

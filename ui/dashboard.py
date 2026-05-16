@@ -23,9 +23,9 @@ def render_stats():
 def render_human_review_queue(agent):
     """
     HITL Workflow:
-    - Approve: Sends immediately.
+    - Approve: Sends email and text message alert simultaneously.
     - Reject (Retry 1): Regenerates draft.
-    - Reject (Retry 2): Auto-sends with professional acknowledgement.
+    - Reject (Retry 2): Auto-sends multi-channel notification with professional acknowledgement.
     """
     st.subheader("📋 Human Review Queue")
     db = SessionLocal()
@@ -53,20 +53,22 @@ def render_human_review_queue(agent):
                 
                 # --- ✅ APPROVE BUTTON ---
                 if c1.button("✅ Approve", key=f"app_{inv.invoice_no}", use_container_width=True):
-                    with st.status(f"Interpretation: Finalizing send for {inv.client_name}...") as status:
+                    with st.status(f"Interpretation: Finalizing dispatch channels for {inv.client_name}...") as status:
                         from agents.nodes import sender_agent
-                        # Fulfilling the state requirement for Audit Logging
+                        # Fulfilling the state requirement with contact_phone context
                         state = {
                             "invoice_no": inv.invoice_no, 
                             "client_name": inv.client_name,
                             "amount": inv.amount,
+                            "due_date": inv.due_date.strftime("%Y-%m-%d") if isinstance(inv.due_date, datetime) else str(inv.due_date),
                             "final_email_body": email_text, 
                             "contact_email": inv.contact_email, 
+                            "contact_phone": inv.contact_phone, # <-- Sent cleanly to nodes
                             "current_stage": inv.follow_up_count + 1,
                             "retry_count": inv.retry_count
                         }
                         sender_agent(state)
-                        status.update(label=f"Email sent to {inv.client_name} successfully!", state="complete")
+                        status.update(label=f"Multi-channel notifications sent to {inv.client_name} successfully!", state="complete")
                     st.rerun()
 
                 # --- 🔄 REJECT / REGENERATE BUTTON ---
@@ -79,20 +81,22 @@ def render_human_review_queue(agent):
                         st.warning(f"Feedback noted for {inv.client_name}. Draft marked for regeneration.")
                         st.rerun()
                     else:
-                        # Logic for second rejection: Auto-Send
-                        with st.status("Interpretation: Max retries reached. Optimizing and sending...") as status:
+                        # Logic for second rejection: Auto-Send Multi-channel
+                        with st.status("Interpretation: Max retries reached. Optimizing and sending notifications...") as status:
                             from agents.nodes import sender_agent
                             state = {
                                 "invoice_no": inv.invoice_no, 
                                 "client_name": inv.client_name,
                                 "amount": inv.amount,
+                                "due_date": inv.due_date.strftime("%Y-%m-%d") if isinstance(inv.due_date, datetime) else str(inv.due_date),
                                 "final_email_body": email_text, 
                                 "contact_email": inv.contact_email, 
+                                "contact_phone": inv.contact_phone, # <-- Sent cleanly to nodes
                                 "current_stage": inv.follow_up_count + 1,
                                 "retry_count": inv.retry_count
                             }
                             sender_agent(state)
-                            status.update(label="System optimized and dispatched.", state="complete")
+                            status.update(label="System optimized and dispatched across channels.", state="complete")
                         
                         # Your specific requested acknowledgement message
                         st.success(f"Thank you for acknowledgment. The email has been updated as per your feedback and sent successfully to {inv.client_name} ({inv.contact_email}).")

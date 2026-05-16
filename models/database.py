@@ -14,6 +14,7 @@ class Invoice(Base):
     amount = Column(Float)
     due_date = Column(DateTime)
     contact_email = Column(String)
+    contact_phone = Column(String, nullable=True) # <-- New column for SMS routing
     
     # Logic Tracking
     follow_up_count = Column(Integer, default=0)
@@ -34,15 +35,15 @@ class AuditLog(Base):
     invoice_no = Column(String)
     client_name = Column(String)
     follow_up_stage = Column(Integer)
-    tone_used = Column(String)      # <--- Added
-    retry_count = Column(Integer)   # <--- Added
+    tone_used = Column(String)      
+    retry_count = Column(Integer)   
     generated_email = Column(Text)
     final_sent_email = Column(Text, nullable=True)
     human_feedback = Column(Text, nullable=True)
     send_status = Column(String) 
     generated_at = Column(DateTime, default=datetime.now)
     sent_at = Column(DateTime, nullable=True)
-    llm_model = Column(String, default="gemini-1.5-flash")
+    llm_model = Column(String, default="gemini-2.5-flash")
     error_message = Column(Text, nullable=True)
 
 # Connection - AI Enablement Local Data Store
